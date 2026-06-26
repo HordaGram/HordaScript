@@ -19,7 +19,7 @@ function Module.Load(Page, AddToggle, AddButton, Config)
         end)
     end)
 
-    -- [ИСПРАВЛЕННЫЙ БЕЗБАГОВЫЙ ФАРМ ДЛЯ 14 ЭТАПА]
+    -- [ФАРМ 14 ЭТАПА — РЯДОМ С МЕТКОЙ]
     AddToggle(Page, "[+] Auto Farm Wins", "AutoFarmWins", function(val)
         task.spawn(function()
             while Config.AutoFarmWins do
@@ -28,19 +28,16 @@ function Module.Load(Page, AddToggle, AddButton, Config)
                     
                     local targetPad = nil
                     
-                    -- Сначала ищем в папке уровней (Clone Engine стандарт)
-                    local levels = workspace:FindFirstChild("Levels") or workspace:FindFirstChild("Stages") or workspace:FindFirstChild("Worlds")
-                    local searchArea = levels and levels:GetDescendants() or workspace:GetDescendants()
-                    
-                    -- Строгий поиск: ищем объект, у которого в имени есть ТОЧНО "14" (а не просто единица)
-                    for _, obj in pairs(searchArea) do
+                    -- Строгий поиск: Ищем именно 14 этап
+                    for _, obj in pairs(workspace:GetDescendants()) do
                         if obj:IsA("BasePart") then
                             local name = obj.Name:lower()
                             local parentName = obj.Parent and obj.Parent.Name:lower() or ""
                             
-                            -- Проверяем, относится ли парт к 14 этапу и является ли он финишем
+                            -- Проверяем, чтобы в названии было "14", но исключаем "140" и т.д.
                             if (name:find("14") or parentName:find("14")) and not name:find("140") then
-                                if name:find("win") or name:find("pad") or name:find("finish") or name:find("touch") or name:find("teleport") then
+                                -- Ищем именно финишный триггер этапа (Win, Pad, Finish, Touch, End)
+                                if name:find("win") or name:find("pad") or name:find("finish") or name:find("touch") or name:find("end") then
                                     targetPad = obj
                                     break
                                 end
@@ -48,7 +45,7 @@ function Module.Load(Page, AddToggle, AddButton, Config)
                         end
                     end
                     
-                    -- Если точный 14 не найден по имени, берем самый дальний чекпоинт от спавна
+                    -- Если 14 этап по имени не нашелся, используем поиск самой дальней зоны на карте (14 уровень всегда в конце)
                     if not targetPad then
                         local maxDist = 0
                         for _, obj in pairs(workspace:GetDescendants()) do
@@ -62,18 +59,16 @@ function Module.Load(Page, AddToggle, AddButton, Config)
                         end
                     end
 
-                    -- Мгновенная отправка пакета касания БЕЗ ожидания task.wait()
+                    -- Логика телепортации РЯДОМ с меткой
                     if targetPad then
-                        -- Жесткий телепорт прямо внутрь плиты
-                        plr.Character.HumanoidRootPart.CFrame = targetPad.CFrame
-                        
-                        -- Мгновенный спам touch-события (сервер засчитывает победу сразу)
-                        firetouchinterest(plr.Character.HumanoidRootPart, targetPad, 0)
-                        firetouchinterest(plr.Character.HumanoidRootPart, targetPad, 1)
+                        -- Телепортируем на 4 ступени НАЗАД и чуть ВЫШЕ плиты, чтобы вы не коснулись её сразу
+                        -- Vector3.new(0, 3, 4) создает идеальный задел для ручного шага
+                        plr.Character.HumanoidRootPart.CFrame = targetPad.CFrame * CFrame.new(0, 3, 4)
                     end
                 end
-                -- Задержка цикла — 0.1 секунды для максимальной скорости получения кубков
-                task.wait(0.1) 
+                
+                -- Задержка 1.5 секунды, чтобы вы успели наступить, забрать кубки и сервер обновил ваш баланс
+                task.wait(1.5) 
             end
         end)
     end)
@@ -82,7 +77,7 @@ function Module.Load(Page, AddToggle, AddButton, Config)
     AddToggle(Page, "[+] Auto Rebirth", "AutoRebirth", function(val)
         task.spawn(function()
             while Config.AutoRebirth do
-                for _, v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+                for _, v in pairs(game:GetService("Reendants") or game:GetService("ReplicatedStorage"):GetDescendants()) do
                     if v:IsA("RemoteEvent") and v.Name:lower():find("rebirth") then
                         v:FireServer(1)
                     end
