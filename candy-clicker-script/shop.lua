@@ -1,48 +1,39 @@
--- Модуль: Aura & Shop
 local Module = {}
-
 function Module.Load(PageAura, PageShop, AddToggle, AddButton, Config)
-    -- Раздел Аур
-    AddButton(PageAura, "[+] Select Aura Dropdown", function()
-        Config.SelectedAura = "Common Aura"
-        print("Выбрана аура: " .. Config.SelectedAura)
-    end)
-
-    AddToggle(PageAura, "[+] Buy Aura", "AutoBuyAura", function(val)
+    -- Авто-покупка Аур/Яиц
+    AddToggle(PageAura, "[+] Auto Buy Aura/Egg", "AutoBuyAura", function(val)
         task.spawn(function()
             while Config.AutoBuyAura do
-                print("Покупка ауры: " .. Config.SelectedAura)
-                task.wait(2)
+                -- Ищет удаленное событие для покупки питомца/ауры
+                local buyRemote = game:GetService("ReplicatedStorage"):FindFirstChild("BuyEgg") or game:GetService("ReplicatedStorage"):FindFirstChild("OpenEgg") or game:GetService("ReplicatedStorage"):FindFirstChild("BuyAura")
+                if buyRemote then
+                    -- Отправляем запрос на покупку стартовой или выбранной ауры
+                    buyRemote:FireServer("Common", false) -- Измените "Common" на нужный тип яйца
+                end
+                task.wait(0.5)
             end
         end)
     end)
 
-    AddButton(PageAura, "[+] Equip Aura", function()
-        print("Надета аура: " .. Config.SelectedAura)
+    -- Экипировка лучшего
+    AddButton(PageAura, "[+] Auto Equip Best", function()
+        local equipRemote = game:GetService("ReplicatedStorage"):FindFirstChild("EquipBest") or game:GetService("ReplicatedStorage"):FindFirstChild("AutoEquip")
+        if equipRemote then
+            equipRemote:FireServer()
+        end
     end)
 
-    AddButton(PageAura, "[+] Auto Equip Best Item", function()
-        print("Экипированы лучшие предметы")
-    end)
-
-    -- Раздел Магазина
-    AddButton(PageShop, "[+] Select Target Item", function()
-        Config.SelectedItem = "Item 1"
-        print("Выбран предмет: " .. Config.SelectedItem)
-    end)
-
+    -- Авто-покупка предметов из магазина
     AddToggle(PageShop, "[+] Auto Buy Item", "AutoBuyItem", function(val)
         task.spawn(function()
             while Config.AutoBuyItem do
-                print("Покупка предмета...")
+                local shopRemote = game:GetService("ReplicatedStorage"):FindFirstChild("BuyItem") or game:GetService("ReplicatedStorage"):FindFirstChild("ShopBuy")
+                if shopRemote then
+                    shopRemote:FireServer("Chocolate")
+                end
                 task.wait(1)
             end
         end)
     end)
-
-    AddToggle(PageShop, "[+] Auto Restock Item (Robux)", "AutoRestockRobux", function(val)
-        if val then print("Внимание: Активирована закупка за Робуксы!") end
-    end)
 end
-
 return Module
