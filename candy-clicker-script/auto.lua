@@ -1,7 +1,7 @@
 local Module = {}
 function Module.Load(Page, AddToggle, AddButton, Config)
     
-    -- [ФУНКЦИЯ АВТОРАНА]
+    -- [АВТОКЛИКЕР]
     AddToggle(Page, "Auto Run", "AutoRun", function(val)
         task.spawn(function()
             while Config.AutoRun do
@@ -19,51 +19,61 @@ function Module.Load(Page, AddToggle, AddButton, Config)
         end)
     end)
 
-    -- [БЕЗБАГОВЫЙ ФАРМ ПОБЕД (14 ЭТАП)]
+    -- [ИСПРАВЛЕННЫЙ БЕЗБАГОВЫЙ ФАРМ ДЛЯ 14 ЭТАПА]
     AddToggle(Page, "[+] Auto Farm Wins", "AutoFarmWins", function(val)
         task.spawn(function()
             while Config.AutoFarmWins do
                 local plr = game.Players.LocalPlayer
                 if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
                     
-                    -- Ищем плиту финиша, которая относится к 14 этапу (Stage 14 / Zone 14)
                     local targetPad = nil
                     
-                    -- Ищем по всей карте плиту с цифрой 14 или именем "14"
-                    for _, obj in pairs(workspace:GetDescendants()) do
-                        if obj:IsA("BasePart") and (obj.Name:find("14") or (obj.Parent and obj.Parent.Name:find("14"))) then
-                            -- Проверяем, что это финишная зона/чекпоинт (обычно содержит в имени Win, Pad, Touch, Finish или Line)
+                    -- Сначала ищем в папке уровней (Clone Engine стандарт)
+                    local levels = workspace:FindFirstChild("Levels") or workspace:FindFirstChild("Stages") or workspace:FindFirstChild("Worlds")
+                    local searchArea = levels and levels:GetDescendants() or workspace:GetDescendants()
+                    
+                    -- Строгий поиск: ищем объект, у которого в имени есть ТОЧНО "14" (а не просто единица)
+                    for _, obj in pairs(searchArea) do
+                        if obj:IsA("BasePart") then
                             local name = obj.Name:lower()
-                            if name:find("win") or name:find("pad") or name:find("touch") or name:find("finish") or name:find("part") then
-                                targetPad = obj
-                                break
+                            local parentName = obj.Parent and obj.Parent.Name:lower() or ""
+                            
+                            -- Проверяем, относится ли парт к 14 этапу и является ли он финишем
+                            if (name:find("14") or parentName:find("14")) and not name:find("140") then
+                                if name:find("win") or name:find("pad") or name:find("finish") or name:find("touch") or name:find("teleport") then
+                                    targetPad = obj
+                                    break
+                                end
                             end
                         end
                     end
                     
-                    -- Если точную плиту "14" не нашли, берем общую логику поиска самой дальней победной зоны
+                    -- Если точный 14 не найден по имени, берем самый дальний чекпоинт от спавна
                     if not targetPad then
+                        local maxDist = 0
                         for _, obj in pairs(workspace:GetDescendants()) do
                             if obj:IsA("BasePart") and (obj.Name:lower():find("win") or obj.Name:lower():find("finish")) then
-                                targetPad = obj
+                                local dist = (obj.Position - Vector3.new(0,0,0)).Magnitude
+                                if dist > maxDist then
+                                    maxDist = dist
+                                    targetPad = obj
+                                end
                             end
                         end
                     end
 
-                    -- Самый стабильный метод забора победы БЕЗ БАГОВ:
+                    -- Мгновенная отправка пакета касания БЕЗ ожидания task.wait()
                     if targetPad then
-                        -- 1. Сначала подтягиваем персонажа чуть ближе к зоне (чтобы сервер поверил)
-                        plr.Character.HumanoidRootPart.CFrame = targetPad.CFrame + Vector3.new(0, 2, 0)
-                        task.wait(0.05)
+                        -- Жесткий телепорт прямо внутрь плиты
+                        plr.Character.HumanoidRootPart.CFrame = targetPad.CFrame
                         
-                        -- 2. Симулируем идеальный физический нажим на плиту (0 - коснулся, 1 - убрал ногу)
+                        -- Мгновенный спам touch-события (сервер засчитывает победу сразу)
                         firetouchinterest(plr.Character.HumanoidRootPart, targetPad, 0)
-                        task.wait(0.05)
                         firetouchinterest(plr.Character.HumanoidRootPart, targetPad, 1)
                     end
                 end
-                -- Задержка между кругами фарма (0.3 сек идеальна, чтобы игра успевала выдавать кубки)
-                task.wait(0.3) 
+                -- Задержка цикла — 0.1 секунды для максимальной скорости получения кубков
+                task.wait(0.1) 
             end
         end)
     end)
@@ -77,7 +87,7 @@ function Module.Load(Page, AddToggle, AddButton, Config)
                         v:FireServer(1)
                     end
                 end
-                task.wait(1)
+                task.wait(0.5)
             end
         end)
     end)
